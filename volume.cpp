@@ -1,13 +1,11 @@
+#include "volume.h"
+#include "inlines.h"
+
+#include <QMenu>
 #include <QTimer>
 #include <QPainter>
-#include <QMenu>
-#include <QPaintEvent>
 #include <math.h>
-#include <stdlib.h>
 #include <qmmp/soundcore.h>
-
-#include "inlines.h"
-#include "volume.h"
 
 Volume::Volume(QWidget *parent)
     : Visual(parent)
@@ -31,9 +29,9 @@ Volume::~Volume()
         delete[] m_intern_vis_data;
     }
 
-    if(m_x_scale)
+    if(m_xscale)
     {
-        delete[] m_x_scale;
+        delete[] m_xscale;
     }
 }
 
@@ -75,11 +73,39 @@ void Volume::showEvent(QShowEvent *)
     m_timer->start();
 }
 
-void Volume::paintEvent(QPaintEvent *e)
+void Volume::paintEvent(QPaintEvent *)
 {
     QPainter painter(this);
-    painter.fillRect(e->rect(), Qt::black);
-    draw(&painter);
+    painter.fillRect(rect(), Qt::black);
+    painter.setRenderHints(QPainter::Antialiasing);
+
+    QLinearGradient line(0, 0, width(), 0);
+    line.setColorAt(0.0f, QColor(0, 0xff, 0).dark());
+    line.setColorAt(0.65f, QColor(0xff, 0xff, 0).dark());
+    line.setColorAt(1.0f, QColor(0xff, 0, 0).dark());
+    painter.fillRect(0, 0, width(), height(), line);
+
+    line.setColorAt(0.0f, QColor(0, 0xff, 0));
+    line.setColorAt(0.65f, QColor(0xff, 0xff, 0));
+    line.setColorAt(1.0f, QColor(0xff, 0, 0));
+
+    if(m_intern_vis_data)
+    {
+        float left = 1.0f, right = 1.0f;
+        if(SoundCore::instance())
+        {
+            left = SoundCore::instance()->leftVolume() / 100.0;
+            right = SoundCore::instance()->rightVolume() / 100.0;
+        }
+
+        const int wid = ceil(m_rows / 2);
+        painter.fillRect(0, 0, m_intern_vis_data[0] * left * m_cols/m_rows, wid, line);
+        painter.fillRect(0, wid, m_intern_vis_data[1] * right * m_cols/m_rows, wid, line);
+    }
+
+    painter.setPen(Qt::white);
+    painter.drawText(10, height() / 4, "L");
+    painter.drawText(10, height() * 3 / 4, "R");
 }
 
 void Volume::contextMenuEvent(QContextMenuEvent *)
@@ -104,17 +130,17 @@ void Volume::process(float *left, float *right)
             delete[] m_intern_vis_data;
         }
 
-        if(m_x_scale)
+        if(m_xscale)
         {
-            delete[] m_x_scale;
+            delete[] m_xscale;
         }
 
         m_intern_vis_data = new int[2]{0};
-        m_x_scale = new int[2]{0};
+        m_xscale = new int[2]{0};
 
         for(int i = 0; i < 2; ++i)
         {
-            m_x_scale[i] = pow(pow(255.0, 1.0 / m_cols), i);
+            m_xscale[i] = pow(pow(255.0, 1.0 / m_cols), i);
         }
     }
 
@@ -131,13 +157,13 @@ void Volume::process(float *left, float *right)
     int magnitude_l = 0;
     int magnitude_r = 0;
 
-    if(m_x_scale[0] == m_x_scale[1])
+    if(m_xscale[0] == m_xscale[1])
     {
         yl = dest_l[0];
         yr = dest_r[0];
     }
 
-    for(int k = m_x_scale[0]; k < m_x_scale[1]; k++)
+    for(int k = m_xscale[0]; k < m_xscale[1]; ++k)
     {
         yl = qMax(dest_l[k], yl);
         yr = qMax(dest_r[k], yr);
@@ -158,42 +184,9 @@ void Volume::process(float *left, float *right)
         magnitude_r = qBound(0, magnitude_r, m_rows);
     }
 
-    m_intern_vis_data[0] -= m_analyzer_falloff * m_rows / 15;
+    m_intern_vis_data[0] -= m_analyzerSize * m_rows / 15;
     m_intern_vis_data[0] = magnitude_l > m_intern_vis_data[0] ? magnitude_l : m_intern_vis_data[0];
 
-    m_intern_vis_data[1] -= m_analyzer_falloff * m_rows / 15;
+    m_intern_vis_data[1] -= m_analyzerSize * m_rows / 15;
     m_intern_vis_data[1] = magnitude_r > m_intern_vis_data[1] ? magnitude_r : m_intern_vis_data[1];
-
-}
-
-void Volume::draw(QPainter *p)
-{
-    p->setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
-
-    QLinearGradient line(0, 0, width(), 0);
-    line.setColorAt(0.0f, QColor(0, 0xff, 0).dark());
-    line.setColorAt(0.65f, QColor(0xff, 0xff, 0).dark());
-    line.setColorAt(1.0f, QColor(0xff, 0, 0).dark());
-    p->fillRect(0, 0, width(), height(), line);
-
-    line.setColorAt(0.0f, QColor(0, 0xff, 0));
-    line.setColorAt(0.65f, QColor(0xff, 0xff, 0));
-    line.setColorAt(1.0f, QColor(0xff, 0, 0));
-
-    if(m_intern_vis_data)
-    {
-        float left = 1.0f, right = 1.0f;
-        if(SoundCore::instance())
-        {
-            left = SoundCore::instance()->leftVolume() / 100.0;
-            right = SoundCore::instance()->rightVolume() / 100.0;
-        }
-        const int wid = ceil(m_rows / 2);
-        p->fillRect(0, 0, m_intern_vis_data[0] * left * m_cols/m_rows, wid, line);
-        p->fillRect(0, wid, m_intern_vis_data[1] * right * m_cols/m_rows, wid, line);
-    }
-
-    p->setPen(Qt::white);
-    p->drawText(10, height() / 4, "L");
-    p->drawText(10, height() * 3 / 4, "R");
 }
