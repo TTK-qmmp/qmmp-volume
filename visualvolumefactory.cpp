@@ -25,10 +25,10 @@ QDialog *VisualVolumeFactory::createConfigDialog(QWidget *parent)
 
 void VisualVolumeFactory::showAbout(QWidget *parent)
 {
-    QMessageBox::about (parent, tr("About Volume Visual Plugin"),
-                        tr("Qmmp Volume Visual Plugin")+"\n"+
-                        tr("This plugin adds Volume visualization")+"\n"+
-                        tr("Written by: Greedysky <greedysky@163.com>"));
+    QMessageBox::about(parent, tr("About Volume Visual Plugin"),
+                       tr("Qmmp Volume Visual Plugin") + "\n" +
+                       tr("This plugin adds Volume visualization") + "\n" +
+                       tr("Written by: Greedysky <greedysky@163.com>"));
 }
 
 QString VisualVolumeFactory::translation() const
