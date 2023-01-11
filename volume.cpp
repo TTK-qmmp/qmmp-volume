@@ -37,7 +37,9 @@ Volume::~Volume()
 void Volume::start()
 {
     if(isVisible())
+    {
         m_timer->start();
+    }
 }
 
 void Volume::stop()
@@ -57,9 +59,13 @@ void Volume::updateVisual()
 void Volume::setFullScreen(bool yes)
 {
     if(yes)
+    {
         setWindowState(windowState() | Qt::WindowFullScreen);
+    }
     else
+    {
         setWindowState(windowState() & ~Qt::WindowFullScreen);
+    }
 }
 
 void Volume::hideEvent(QHideEvent *)
