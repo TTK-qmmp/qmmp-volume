@@ -2,7 +2,7 @@ include($$PWD/common/common.pri)
 
 HEADERS += volume.h \
            visualvolumefactory.h
-           
+
 SOURCES += volume.cpp \
            visualvolumefactory.cpp
 
