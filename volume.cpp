@@ -23,15 +23,8 @@ Volume::Volume(QWidget *parent)
 
 Volume::~Volume()
 {
-    if(m_intern_vis_data)
-    {
-        delete[] m_intern_vis_data;
-    }
-
-    if(m_xscale)
-    {
-        delete[] m_xscale;
-    }
+    delete[] m_visualData;
+    delete[] m_xscale;
 }
 
 void Volume::start()
@@ -95,11 +88,11 @@ void Volume::paintEvent(QPaintEvent *)
     line.setColorAt(0.65f, QColor(0xff, 0xff, 0));
     line.setColorAt(1.0f, QColor(0xff, 0, 0));
 
-    if(m_intern_vis_data)
+    if(m_visualData)
     {
         const int wid = ceil(m_rows / 2);
-        painter.fillRect(0, 0, m_intern_vis_data[0] * m_cols / m_rows, wid, line);
-        painter.fillRect(0, wid, m_intern_vis_data[1] * m_cols / m_rows, wid, line);
+        painter.fillRect(0, 0, m_visualData[0] * m_cols / m_rows, wid, line);
+        painter.fillRect(0, wid, m_visualData[1] * m_cols / m_rows, wid, line);
     }
 
     painter.setPen(Qt::white);
@@ -124,17 +117,10 @@ void Volume::process(float *left, float *right)
         m_rows = rows;
         m_cols = cols;
 
-        if(m_intern_vis_data)
-        {
-            delete[] m_intern_vis_data;
-        }
+        delete[] m_visualData;
+        delete[] m_xscale;
 
-        if(m_xscale)
-        {
-            delete[] m_xscale;
-        }
-
-        m_intern_vis_data = new int[2]{0};
+        m_visualData = new int[2]{0};
         m_xscale = new int[2]{0};
 
         for(int i = 0; i < 2; ++i)
@@ -143,29 +129,24 @@ void Volume::process(float *left, float *right)
         }
     }
 
-    short dest_l[256];
-    short dest_r[256];
+    short destl[256], destr[256];
+    calc_freq(destl, left);
+    calc_freq(destr, right);
 
-    calc_freq(dest_l, left);
-    calc_freq(dest_r, right);
-
-    const double y_scale = (double) 1.25 * m_rows / log(256);
-
-    short yl = 0;
-    short yr = 0;
-    int magnitude_l = 0;
-    int magnitude_r = 0;
+    short yl = 0, yr = 0;
+    int magnitudel = 0, magnituder = 0;
+    const double yscale = (double)1.25 * m_rows / log(256);
 
     if(m_xscale[0] == m_xscale[1])
     {
-        yl = dest_l[0];
-        yr = dest_r[0];
+        yl = destl[0];
+        yr = destr[0];
     }
 
     for(int k = m_xscale[0]; k < m_xscale[1]; ++k)
     {
-        yl = qMax(dest_l[k], yl);
-        yr = qMax(dest_r[k], yr);
+        yl = qMax(destl[k], yl);
+        yr = qMax(destr[k], yr);
     }
 
     yl >>= 7; //256
@@ -173,19 +154,19 @@ void Volume::process(float *left, float *right)
 
     if(yl)
     {
-        magnitude_l = int(log(yl) * y_scale);
-        magnitude_l = qBound(0, magnitude_l, m_rows);
+        magnitudel = int(log(yl) * yscale);
+        magnitudel = qBound(0, magnitudel, m_rows);
     }
 
     if(yr)
     {
-        magnitude_r = int(log(yr) * y_scale);
-        magnitude_r = qBound(0, magnitude_r, m_rows);
+        magnituder = int(log(yr) * yscale);
+        magnituder = qBound(0, magnituder, m_rows);
     }
 
-    m_intern_vis_data[0] -= m_analyzerSize * m_rows / 15;
-    m_intern_vis_data[0] = magnitude_l > m_intern_vis_data[0] ? magnitude_l : m_intern_vis_data[0];
+    m_visualData[0] -= m_analyzerSize * m_rows / 15;
+    m_visualData[0] = magnitudel > m_visualData[0] ? magnitudel : m_visualData[0];
 
-    m_intern_vis_data[1] -= m_analyzerSize * m_rows / 15;
-    m_intern_vis_data[1] = magnitude_r > m_intern_vis_data[1] ? magnitude_r : m_intern_vis_data[1];
+    m_visualData[1] -= m_analyzerSize * m_rows / 15;
+    m_visualData[1] = magnituder > m_visualData[1] ? magnituder : m_visualData[1];
 }
