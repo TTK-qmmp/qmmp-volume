@@ -1,10 +1,12 @@
 #include "volume.h"
 #include "inlines.h"
 
+#include <cmath>
 #include <QMenu>
 #include <QTimer>
 #include <QPainter>
-#include <math.h>
+
+static constexpr int CHANNELS = 2;
 
 Volume::Volume(QWidget *parent)
     : Visual(parent)
@@ -90,7 +92,7 @@ void Volume::paintEvent(QPaintEvent *)
 
     if(m_visualData)
     {
-        const int wid = ceil(m_rows / 2);
+        const int wid = std::ceil(m_rows / 2);
         painter.fillRect(0, 0, m_visualData[0] * m_cols / m_rows, wid, line);
         painter.fillRect(0, wid, m_visualData[1] * m_cols / m_rows, wid, line);
     }
@@ -120,12 +122,12 @@ void Volume::process(float *left, float *right)
         delete[] m_visualData;
         delete[] m_xscale;
 
-        m_visualData = new int[2]{0};
-        m_xscale = new int[2]{0};
+        m_visualData = new int[CHANNELS]{0};
+        m_xscale = new int[CHANNELS]{0};
 
-        for(int i = 0; i < 2; ++i)
+        for(int i = 0; i < CHANNELS; ++i)
         {
-            m_xscale[i] = pow(255.0, float(i) / m_cols);
+            m_xscale[i] = std::pow(255.0, float(i) / m_cols);
         }
     }
 
@@ -135,7 +137,7 @@ void Volume::process(float *left, float *right)
 
     short yl = 0, yr = 0;
     int i = 0, magnitudel = 0, magnituder = 0;
-    const double yscale = (double)1.25 * m_rows / log(256);
+    const double yscale = (double)1.25 * m_rows / std::log(256);
 
     if(m_xscale[i] == m_xscale[i + 1])
     {
@@ -151,12 +153,12 @@ void Volume::process(float *left, float *right)
 
     if(yl > 0)
     {
-        magnitudel = qBound(0, int(log(yl) * yscale), m_rows);
+        magnitudel = qBound(0, int(std::log(yl) * yscale), m_rows);
     }
 
     if(yr > 0)
     {
-        magnituder = qBound(0, int(log(yr) * yscale), m_rows);
+        magnituder = qBound(0, int(std::log(yr) * yscale), m_rows);
     }
 
     m_visualData[0] -= m_analyzerSize * m_rows / 15;
